@@ -1,0 +1,174 @@
+{% extends "index.html" %}
+{% load static %}
+
+{% block search %}
+<div class="search-wrapper" style="flex:1; max-width:380px;">
+  <i class="bx bx-search"></i>
+  <input
+    type="text"
+    class="form-control search-input"
+    placeholder="Search your requests..."
+    id="statusSearch"
+  />
+</div>
+{% endblock %}
+
+{% block nav %}
+<ul class="menu-inner py-1">
+  <li class="menu-item">
+    <a href="{% url 'user_book_list' %}" class="menu-link">
+      <i class="bx bx-book-open"></i>
+      <div>Browse Books</div>
+    </a>
+  </li>
+  <li class="menu-item active">
+    <a href="{% url 'user_book_history' %}" class="menu-link">
+      <i class="bx bx-receipt"></i>
+      <div>My Requests</div>
+    </a>
+  </li>
+</ul>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+  <div class="container-xxl flex-grow-1 container-p-y" style="padding: 28px 32px;">
+
+    <!-- Page Header -->
+    <div style="margin-bottom:28px;">
+      <div class="page-title">My Requests</div>
+      <div class="page-subtitle">
+        <span>Track the status of all your book borrowing requests</span>
+      </div>
+    </div>
+
+    <!-- Status Summary -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:16px; margin-bottom:28px;">
+      <div style="background:white; border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow-sm); border-left:3px solid var(--brown-light);">
+        <div style="font-size:11px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px;">Total</div>
+        <div style="font-family:'Playfair Display',serif; font-size:24px; font-weight:700; color:var(--brown-dark);">{{ book_list|length }}</div>
+      </div>
+      <div style="background:white; border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow-sm); border-left:3px solid var(--accent);">
+        <div style="font-size:11px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; color:var(--accent); margin-bottom:8px;">Approved</div>
+        <div style="font-family:'Playfair Display',serif; font-size:24px; font-weight:700; color:var(--accent);" id="approvedCount">—</div>
+      </div>
+      <div style="background:white; border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow-sm); border-left:3px solid var(--sky);">
+        <div style="font-size:11px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; color:var(--sky); margin-bottom:8px;">Pending</div>
+        <div style="font-family:'Playfair Display',serif; font-size:24px; font-weight:700; color:var(--sky);" id="pendingCount">—</div>
+      </div>
+      <div style="background:white; border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow-sm); border-left:3px solid var(--danger);">
+        <div style="font-size:11px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; color:var(--danger); margin-bottom:8px;">Rejected</div>
+        <div style="font-family:'Playfair Display',serif; font-size:24px; font-weight:700; color:var(--danger);" id="rejectedCount">—</div>
+      </div>
+    </div>
+
+    <!-- Requests Table -->
+    <div class="table-card">
+      <div class="table-header">
+        <h5>Request History</h5>
+        <a href="{% url 'user_book_list' %}" class="btn btn-primary btn-sm">
+          <i class="bx bx-plus"></i> Request a Book
+        </a>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table" style="background:white;" id="statusTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Book Title</th>
+              <th>Account</th>
+              <th>Status</th>
+              <th>Next Step</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for obj in book_list %}
+            <tr class="status-row" data-status="{{ obj.status }}">
+              <td style="color:var(--text-muted); font-size:13px;">{{ forloop.counter }}</td>
+              <td>
+                <div style="font-weight:600; color:var(--text-primary);">{{ obj.book__book_title }}</div>
+              </td>
+              <td>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <div style="width:30px; height:30px; background:var(--cream-dark); border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--brown); font-size:12px; font-weight:700;">
+                    {{ obj.user__username|first|upper }}
+                  </div>
+                  <span style="font-size:13px; color:var(--text-secondary);">{{ obj.user__username }}</span>
+                </div>
+              </td>
+              <td>
+                {% if obj.status == "approved" %}
+                <span class="badge bg-label-success">
+                  <i class="bx bx-check-circle" style="margin-right:4px;"></i>Approved
+                </span>
+                {% elif obj.status == "rejected" %}
+                <span class="badge bg-label-danger">
+                  <i class="bx bx-x-circle" style="margin-right:4px;"></i>Rejected
+                </span>
+                {% elif obj.status == "pending" %}
+                <span class="badge bg-label-info">
+                  <i class="bx bx-time-five" style="margin-right:4px;"></i>Pending
+                </span>
+                {% endif %}
+              </td>
+              <td>
+                {% if obj.status == "approved" %}
+                <div style="font-size:12px; color:var(--accent); font-weight:600; background:var(--accent-pale); padding:5px 10px; border-radius:6px; display:inline-flex; align-items:center; gap:5px;">
+                  <i class="bx bx-store"></i> Visit library to collect
+                </div>
+                {% elif obj.status == "rejected" %}
+                <a href="{% url 'user_book_list' %}" style="font-size:12px; color:var(--sky); font-weight:600; text-decoration:none;">
+                  Browse other books →
+                </a>
+                {% elif obj.status == "pending" %}
+                <div style="font-size:12px; color:var(--text-muted);">Waiting for admin review</div>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="5" style="text-align:center; padding:64px 20px;">
+                <i class="bx bx-book" style="font-size:52px; display:block; margin-bottom:16px; opacity:0.25; color:var(--brown-light);"></i>
+                <div style="font-size:15px; font-weight:600; color:var(--text-secondary); margin-bottom:6px;">No requests yet</div>
+                <div style="font-size:13px; color:var(--text-muted); margin-bottom:16px;">Start browsing our collection and request your first book.</div>
+                <a href="{% url 'user_book_list' %}" class="btn btn-primary btn-sm">
+                  <i class="bx bx-book-open"></i> Browse Books
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Count statuses
+  window.addEventListener('DOMContentLoaded', function() {
+    const rows = document.querySelectorAll('.status-row');
+    let approved = 0, pending = 0, rejected = 0;
+    rows.forEach(r => {
+      const s = r.dataset.status;
+      if (s === 'approved') approved++;
+      else if (s === 'pending') pending++;
+      else if (s === 'rejected') rejected++;
+    });
+    document.getElementById('approvedCount').textContent = approved || '0';
+    document.getElementById('pendingCount').textContent = pending || '0';
+    document.getElementById('rejectedCount').textContent = rejected || '0';
+  });
+
+  // Search filter
+  document.getElementById('statusSearch').addEventListener('input', function() {
+    const q = this.value.toLowerCase();
+    document.querySelectorAll('.status-row').forEach(row => {
+      const text = row.textContent.toLowerCase();
+      row.style.display = text.includes(q) ? '' : 'none';
+    });
+  });
+</script>
+{% endblock %}

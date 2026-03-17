@@ -1,0 +1,148 @@
+{% extends "index.html" %}
+{% load static %}
+
+{% block nav %}
+<ul class="menu-inner py-1">
+  <li class="menu-item">
+    <a href="{% url 'admin_book_list' %}" class="menu-link">
+      <i class="bx bx-collection"></i>
+      <div>All Books</div>
+    </a>
+  </li>
+  <li class="menu-item active">
+    <a href="{% url 'admin_book_request_list' %}" class="menu-link">
+      <i class="bx bx-bell"></i>
+      <div>Book Requests</div>
+    </a>
+  </li>
+  {% if not request.user.is_staff %}
+  <li class="menu-item">
+    <a href="{% url 'admin_book_request_list' %}" class="menu-link">
+      <i class="bx bx-group"></i>
+      <div>User List</div>
+    </a>
+  </li>
+  {% endif %}
+  <li class="menu-item">
+    <a href="{% url 'admin_book_status_list' %}" class="menu-link">
+      <i class="bx bx-list-check"></i>
+      <div>Request Status</div>
+    </a>
+  </li>
+</ul>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+  <div class="container-xxl flex-grow-1 container-p-y" style="padding: 28px 32px;">
+
+    <!-- Page Header -->
+    <div style="margin-bottom:28px;">
+      <div class="page-title">Book Requests</div>
+      <div class="page-subtitle">
+        <span>Admin</span>
+        <span class="breadcrumb-sep">›</span>
+        <span>Pending Approvals</span>
+      </div>
+    </div>
+
+    <!-- Info Banner -->
+    <div style="background:var(--sky-pale); border:1px solid #b3d4e8; border-radius:var(--radius); padding:14px 18px; margin-bottom:24px; display:flex; align-items:center; gap:12px;">
+      <i class="bx bx-info-circle" style="color:var(--sky); font-size:20px; flex-shrink:0;"></i>
+      <span style="font-size:13px; color:var(--sky); font-weight:500;">Review each request below. Check <b>Approve</b> or <b>Reject</b> for each entry, then click <b>Submit</b> to apply changes.</span>
+    </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        <h5>Pending Requests</h5>
+        <span style="font-size:13px; color:var(--text-muted);">{{ book_lst|length }} request{{ book_lst|length|pluralize }}</span>
+      </div>
+
+      <form method="post">
+        {% csrf_token %}
+        <div class="table-responsive">
+          <table class="table" style="background:white;">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Book Title</th>
+                <th>Requested By</th>
+                <th style="text-align:center;">Approve</th>
+                <th style="text-align:center;">Reject</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for obj in book_lst %}
+              <tr>
+                <td style="color:var(--text-muted); font-size:13px;">{{ forloop.counter }}</td>
+                <td>
+                  <div style="font-weight:600; color:var(--text-primary);">{{ obj.book__book_title }}</div>
+                </td>
+                <td>
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:32px; height:32px; background:var(--cream-dark); border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--brown); font-size:13px; font-weight:700; flex-shrink:0;">
+                      {{ obj.user__username|first|upper }}
+                    </div>
+                    <span style="font-weight:500; color:var(--text-primary);">{{ obj.user__username }}</span>
+                  </div>
+                </td>
+                <td>
+                  <div style="display:flex; justify-content:center;">
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:6px 14px; border-radius:8px; background:var(--accent-pale); color:var(--accent); font-size:13px; font-weight:600; transition:all 0.15s;" class="approve-label-{{ obj.id }}">
+                      <input
+                        name="approved_{{ obj.id }}"
+                        value="{{ obj.id }}"
+                        class="form-check-input"
+                        type="checkbox"
+                        id="defaultCheck1{{ obj.id }}"
+                        onclick="chkBoxFunc('defaultCheck2{{ obj.id }}', 'defaultCheck1{{ obj.id }}')"
+                        style="accent-color:var(--accent);"
+                      />
+                      Approve
+                    </label>
+                  </div>
+                </td>
+                <td>
+                  <div style="display:flex; justify-content:center;">
+                    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; padding:6px 14px; border-radius:8px; background:var(--danger-pale); color:var(--danger); font-size:13px; font-weight:600; transition:all 0.15s;" class="reject-label-{{ obj.id }}">
+                      <input
+                        name="reject_{{ obj.id }}"
+                        value="{{ obj.id }}"
+                        class="form-check-input"
+                        type="checkbox"
+                        id="defaultCheck2{{ obj.id }}"
+                        onclick="chkBoxFunc('defaultCheck1{{ obj.id }}', 'defaultCheck2{{ obj.id }}')"
+                        style="accent-color:var(--danger);"
+                      />
+                      Reject
+                    </label>
+                  </div>
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="5" style="text-align:center; padding:56px 20px; color:var(--text-muted);">
+                  <i class="bx bx-check-circle" style="font-size:44px; display:block; margin-bottom:12px; opacity:0.35; color:var(--accent);"></i>
+                  <div style="font-weight:600; font-size:15px; color:var(--text-secondary); margin-bottom:4px;">All caught up!</div>
+                  <div style="font-size:13px;">No pending book requests at the moment.</div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if book_lst %}
+        <div style="padding:20px 24px; border-top:1px solid var(--border); background:var(--cream); display:flex; gap:12px; align-items:center;">
+          <button type="submit" class="btn btn-primary">
+            <i class="bx bx-check"></i> Submit Decisions
+          </button>
+          <span style="font-size:13px; color:var(--text-muted);">Unselected requests will remain pending.</span>
+        </div>
+        {% endif %}
+      </form>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

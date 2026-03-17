@@ -1,0 +1,198 @@
+{% extends "index.html" %}
+{% load static %}
+
+{% block nav %}
+<ul class="menu-inner py-1">
+  <li class="menu-item active">
+    <a href="{% url 'admin_book_list' %}" class="menu-link">
+      <i class="bx bx-collection"></i>
+      <div>All Books</div>
+    </a>
+  </li>
+  <li class="menu-item">
+    <a href="{% url 'admin_book_request_list' %}" class="menu-link">
+      <i class="bx bx-bell"></i>
+      <div>Book Requests</div>
+    </a>
+  </li>
+  {% if not request.user.is_staff %}
+  <li class="menu-item">
+    <a href="{% url 'admin_book_request_list' %}" class="menu-link">
+      <i class="bx bx-group"></i>
+      <div>User List</div>
+    </a>
+  </li>
+  {% endif %}
+  <li class="menu-item">
+    <a href="{% url 'admin_book_status_list' %}" class="menu-link">
+      <i class="bx bx-list-check"></i>
+      <div>Request Status</div>
+    </a>
+  </li>
+</ul>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+  <div class="container-xxl flex-grow-1 container-p-y" style="padding: 28px 32px;">
+
+    <!-- Page Header -->
+    <div style="margin-bottom:28px;">
+      <div class="page-title">
+        {% if book_obj.book_title %}Edit Book{% else %}Add New Book{% endif %}
+      </div>
+      <div class="page-subtitle">
+        <a href="{% url 'admin_book_list' %}" style="color:var(--text-muted); text-decoration:none; transition:color 0.15s;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-muted)'">All Books</a>
+        <span class="breadcrumb-sep">›</span>
+        <span>{% if book_obj.book_title %}{{ book_obj.book_title }}{% else %}New Book{% endif %}</span>
+      </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 340px; gap:24px; align-items:start;" class="book-form-grid">
+      
+      <!-- Main form card -->
+      <div class="card">
+        <div class="card-header">
+          <h5>Book Information</h5>
+        </div>
+        <div class="card-body">
+          <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div style="margin-bottom:20px;">
+              <label class="form-label" for="basic-default-fullname">Book Title <span style="color:var(--danger);">*</span></label>
+              <input
+                type="text"
+                required
+                name="title"
+                value="{% if book_obj.book_title %}{{ book_obj.book_title }}{% endif %}"
+                class="form-control"
+                id="basic-default-fullname"
+                placeholder="Enter book title..."
+              />
+            </div>
+
+            <div style="margin-bottom:20px;">
+              <label class="form-label" for="basic-default-message">Description <span style="color:var(--danger);">*</span></label>
+              <textarea
+                name="desc"
+                required
+                id="basic-default-message"
+                class="form-control"
+                placeholder="Write a brief description about the book..."
+                style="min-height:130px;"
+              >{% if book_obj.activity_desc %}{{ book_obj.activity_desc }}{% endif %}</textarea>
+            </div>
+
+            <div style="margin-bottom:28px;">
+              <label class="form-label" for="formFile">Book Cover Image {% if not book_obj.book_img %}<span style="color:var(--danger);">*</span>{% endif %}</label>
+
+              {% if book_obj.book_img %}
+              <div style="display:flex; align-items:center; gap:14px; padding:14px; background:var(--cream); border-radius:10px; border:1px solid var(--border); margin-bottom:12px;">
+                <img src="{% static book_obj.book_img %}" style="width:48px; height:64px; object-fit:cover; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,0.1);" alt="Current cover" />
+                <div>
+                  <div style="font-size:13px; font-weight:600; color:var(--text-primary);">Current cover image</div>
+                  <div style="font-size:12px; color:var(--text-muted);">Upload a new image to replace it</div>
+                </div>
+              </div>
+              {% endif %}
+
+              <div style="border:2px dashed var(--border); border-radius:10px; padding:28px; text-align:center; background:var(--cream); transition:border-color 0.2s, background 0.2s;" id="dropZone">
+                <i class="bx bx-cloud-upload" style="font-size:36px; color:var(--text-muted); display:block; margin-bottom:8px;"></i>
+                <div style="font-size:14px; color:var(--text-secondary); margin-bottom:4px;">Drag & drop or click to upload</div>
+                <div style="font-size:12px; color:var(--text-muted);">PNG, JPG, WEBP up to 5MB</div>
+                <input
+                  class="form-control"
+                  {% if not book_obj.book_img %}required{% endif %}
+                  name="fileinput"
+                  type="file"
+                  id="formFile"
+                  accept="image/*"
+                  style="opacity:0; position:absolute; inset:0; cursor:pointer; width:100%; height:100%;"
+                />
+              </div>
+              <div id="filePreview" style="display:none; margin-top:10px; padding:10px 14px; background:var(--accent-pale); border-radius:8px; font-size:13px; color:var(--accent); font-weight:500;">
+                <i class="bx bx-check-circle" style="margin-right:6px;"></i>
+                <span id="fileName"></span>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:12px;">
+              <button type="submit" class="btn btn-primary">
+                <i class="bx bx-save"></i>
+                {% if book_obj.book_title %}Update Book{% else %}Add Book{% endif %}
+              </button>
+              <a href="{% url 'admin_book_list' %}">
+                <button type="button" class="btn btn-secondary">
+                  <i class="bx bx-arrow-back"></i> Cancel
+                </button>
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Tips card -->
+      <div class="card" style="position:sticky; top:24px;">
+        <div class="card-header">
+          <h5>Tips & Guidelines</h5>
+        </div>
+        <div class="card-body">
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div style="display:flex; gap:12px;">
+              <div style="width:32px; height:32px; background:var(--accent-pale); border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <i class="bx bx-text" style="color:var(--accent);"></i>
+              </div>
+              <div>
+                <div style="font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:3px;">Clear Title</div>
+                <div style="font-size:12px; color:var(--text-muted); line-height:1.5;">Use the full, official title of the book including subtitle if relevant.</div>
+              </div>
+            </div>
+            <div style="display:flex; gap:12px;">
+              <div style="width:32px; height:32px; background:var(--sky-pale); border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <i class="bx bx-paragraph" style="color:var(--sky);"></i>
+              </div>
+              <div>
+                <div style="font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:3px;">Good Description</div>
+                <div style="font-size:12px; color:var(--text-muted); line-height:1.5;">Include author, genre, and a brief synopsis to help members decide.</div>
+              </div>
+            </div>
+            <div style="display:flex; gap:12px;">
+              <div style="width:32px; height:32px; background:var(--warning-pale); border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
+                <i class="bx bx-image" style="color:var(--warning);"></i>
+              </div>
+              <div>
+                <div style="font-size:13px; font-weight:600; color:var(--text-primary); margin-bottom:3px;">Cover Image</div>
+                <div style="font-size:12px; color:var(--text-muted); line-height:1.5;">Use the official book cover in portrait orientation (2:3 ratio) for best results.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<style>
+  @media (max-width: 900px) {
+    .book-form-grid { grid-template-columns: 1fr !important; }
+  }
+
+  #dropZone { position: relative; }
+  #dropZone:hover { border-color: var(--accent-light) !important; background: var(--accent-pale) !important; }
+</style>
+
+<script>
+  document.getElementById('formFile').addEventListener('change', function() {
+    const preview = document.getElementById('filePreview');
+    const fileName = document.getElementById('fileName');
+    if (this.files && this.files[0]) {
+      fileName.textContent = this.files[0].name;
+      preview.style.display = 'block';
+    } else {
+      preview.style.display = 'none';
+    }
+  });
+</script>
+{% endblock %}

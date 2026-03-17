@@ -1,0 +1,135 @@
+{% extends "index.html" %}
+{% load static %}
+
+{% block nav %}
+<ul class="menu-inner py-1">
+  <li class="menu-item">
+    <a href="{% url 'admin_book_list' %}" class="menu-link">
+      <i class="bx bx-collection"></i>
+      <div>All Books</div>
+    </a>
+  </li>
+  <li class="menu-item">
+    <a href="{% url 'admin_book_request_list' %}" class="menu-link">
+      <i class="bx bx-bell"></i>
+      <div>Book Requests</div>
+    </a>
+  </li>
+  {% if not request.user.is_staff %}
+  <li class="menu-item">
+    <a href="{% url 'admin_book_request_list' %}" class="menu-link">
+      <i class="bx bx-group"></i>
+      <div>User List</div>
+    </a>
+  </li>
+  {% endif %}
+  <li class="menu-item active">
+    <a href="{% url 'admin_book_status_list' %}" class="menu-link">
+      <i class="bx bx-list-check"></i>
+      <div>Request Status</div>
+    </a>
+  </li>
+</ul>
+{% endblock %}
+
+{% block content %}
+<div class="content-wrapper">
+  <div class="container-xxl flex-grow-1 container-p-y" style="padding: 28px 32px;">
+
+    <!-- Page Header -->
+    <div style="margin-bottom:28px;">
+      <div class="page-title">Request Status</div>
+      <div class="page-subtitle">
+        <span>Admin</span>
+        <span class="breadcrumb-sep">›</span>
+        <span>All Requests Overview</span>
+      </div>
+    </div>
+
+    <!-- Summary cards -->
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px, 1fr)); gap:16px; margin-bottom:28px;">
+      <div style="background:white; border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow-sm);">
+        <div style="font-size:11px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; color:var(--text-muted); margin-bottom:8px;">All Requests</div>
+        <div style="font-family:'Playfair Display',serif; font-size:26px; font-weight:700; color:var(--brown-dark);">{{ book_list|length }}</div>
+      </div>
+      <div style="background:white; border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow-sm);">
+        <div style="font-size:11px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; color:var(--accent); margin-bottom:8px;">Approved</div>
+        <div style="font-family:'Playfair Display',serif; font-size:26px; font-weight:700; color:var(--accent);">
+          {% with count=0 %}{{ book_list|length }}{% endwith %}
+        </div>
+      </div>
+      <div style="background:white; border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow-sm);">
+        <div style="font-size:11px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; color:var(--sky); margin-bottom:8px;">Pending</div>
+        <div style="font-family:'Playfair Display',serif; font-size:26px; font-weight:700; color:var(--sky);">—</div>
+      </div>
+      <div style="background:white; border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; box-shadow:var(--shadow-sm);">
+        <div style="font-size:11px; font-weight:700; letter-spacing:0.8px; text-transform:uppercase; color:var(--danger); margin-bottom:8px;">Rejected</div>
+        <div style="font-family:'Playfair Display',serif; font-size:26px; font-weight:700; color:var(--danger);">—</div>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-card">
+      <div class="table-header">
+        <h5>Request Log</h5>
+        <span style="font-size:13px; color:var(--text-muted);">{{ book_list|length }} total</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="table" style="background:white;">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Book Title</th>
+              <th>Requested By</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for obj in book_list %}
+            <tr>
+              <td style="color:var(--text-muted); font-size:13px;">{{ forloop.counter }}</td>
+              <td>
+                <div style="font-weight:600; color:var(--text-primary);">{{ obj.book__book_title }}</div>
+              </td>
+              <td>
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <div style="width:30px; height:30px; background:var(--cream-dark); border-radius:50%; display:flex; align-items:center; justify-content:center; color:var(--brown); font-size:12px; font-weight:700; flex-shrink:0;">
+                    {{ obj.user__username|first|upper }}
+                  </div>
+                  <span style="font-weight:500; color:var(--text-primary);">{{ obj.user__username }}</span>
+                </div>
+              </td>
+              <td>
+                {% if obj.status == "approved" %}
+                <span class="badge bg-label-success">
+                  <i class="bx bx-check-circle" style="margin-right:4px;"></i>{{ obj.status|capfirst }}
+                </span>
+                {% elif obj.status == "rejected" %}
+                <span class="badge bg-label-danger">
+                  <i class="bx bx-x-circle" style="margin-right:4px;"></i>{{ obj.status|capfirst }}
+                </span>
+                {% elif obj.status == "pending" %}
+                <span class="badge bg-label-info">
+                  <i class="bx bx-time-five" style="margin-right:4px;"></i>{{ obj.status|capfirst }}
+                </span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" style="text-align:center; padding:56px 20px; color:var(--text-muted);">
+                <i class="bx bx-list-check" style="font-size:44px; display:block; margin-bottom:12px; opacity:0.3;"></i>
+                <div style="font-size:15px; font-weight:600; color:var(--text-secondary); margin-bottom:4px;">No requests yet</div>
+                <div style="font-size:13px;">Request history will appear here.</div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
