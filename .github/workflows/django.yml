@@ -153,8 +153,8 @@ jobs:
           aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
-          application_name: Elastic-beanstalk-x24220591
-          environment_name: Elastic-beanstalk-x24220591-env
+          application_name: Eb-devops-x25105990
+          environment_name: Eb-devops-x25105990-env
           region: us-east-1
           version_label: "build-${{ github.run_number }}"
           deployment_package: deploy.zip
