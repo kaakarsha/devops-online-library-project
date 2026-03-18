@@ -15,7 +15,7 @@ import os
 from django.core.management.utils import get_random_secret_key
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "kdlk@3';>2541Xszv?'(876%^DDcvf3?"
+SECRET_KEY = get_random_secret_key()
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
