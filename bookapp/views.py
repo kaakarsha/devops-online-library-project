@@ -30,6 +30,7 @@ def check_if_admin_or_user(view_func):
     """Decorator to restrict access based on admin/user role."""
 
     def wrapper(request, *_args, **_kwargs):
+        """Wrapper for access control."""
         if not request.user.is_staff and request.path in [
             "/admin-book-list/",
             "/admin-book-detail/",
@@ -56,6 +57,7 @@ class LogoutView(View):
     """Handles user logout."""
 
     def get(self, request, *_args, **_kwargs):
+        """Handle GET request for logout."""
         logout(request)
         return redirect("login_page")
 
@@ -64,9 +66,11 @@ class LoginView(View):
     """Handles user login."""
 
     def get(self, request, *_args, **_kwargs):
+        """Render login page."""
         return render(request, template_name="login.html")
 
     def post(self, request, *_args, **_kwargs):
+        """Authenticate and login user."""
         user_obj = authenticate(
             request,
             username=request.POST.get("email-username"),
@@ -95,10 +99,12 @@ class RegisterView(View):
     """Handles user registration."""
 
     def get(self, request, *_args, **_kwargs):
+        """Render registration form."""
         form = UserRegistrationForm()
         return render(request, "register.html", {"form": form})
 
     def post(self, request, *_args, **_kwargs):
+        """Process registration form."""
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
@@ -112,6 +118,7 @@ class IndexView(View):
     """Displays index page."""
 
     def get(self, request, *_args, **_kwargs):
+        """Render index page."""
         return render(request, template_name="index.html")
 
 
@@ -120,6 +127,7 @@ class AdminBookListView(View):
     """Displays and manages book list for admin."""
 
     def get(self, request, *_args, **_kwargs):
+        """Display list of books."""
         if request.GET.get("query"):
             book_obj = models.BookModel.objects.filter(
                 book_title__icontains=request.GET.get("query")
@@ -144,6 +152,7 @@ class AdminBookListView(View):
         )
 
     def post(self, request, *_args, **_kwargs):
+        """Handle delete and release actions."""
         if request.POST.get("deletesubmit") and request.POST.get("book_id"):
             models.BookModel.objects.filter(id=request.POST.get("book_id")).delete()
 
@@ -159,6 +168,7 @@ class AdminBookStatusList(View):
     """Displays book status for admin."""
 
     def get(self, request, *_args, **_kwargs):
+        """Show book status."""
         allot_obj = models.BookAllotmentModel.objects.values(
             "user__username", "book__book_title", "modefield_at", "status"
         )
@@ -174,6 +184,7 @@ class UserBookListView(View):
     """Displays book list and analytics for users."""
 
     def get(self, request, *_args, **_kwargs):
+        """Display books and analytics."""
         if request.GET.get("query"):
             book_obj = models.BookModel.objects.filter(
                 book_title__icontains=request.GET.get("query")
@@ -226,6 +237,7 @@ class UserBookListView(View):
         )
 
     def post(self, request, *_args, **_kwargs):
+        """Handle book request."""
         models.BookAllotmentModel.objects.filter(user=request.user).delete()
 
         if request.POST.get("request_book"):
@@ -244,6 +256,7 @@ class UserHistoryList(View):
     """Displays user history."""
 
     def get(self, request, *_args, **_kwargs):
+        """Show user activity."""
         allot_obj = models.BookAllotmentModel.objects.filter(user=request.user).values(
             "user__username", "book__book_title", "modefield_at", "status"
         )
@@ -259,6 +272,7 @@ class AdminBookDetailView(View):
     """Create or update book details."""
 
     def get(self, request, *_args, **_kwargs):
+        """Render book form."""
         book_obj = None
         if request.GET.get("book"):
             book_obj = (
@@ -275,6 +289,7 @@ class AdminBookDetailView(View):
         )
 
     def post(self, request, *_args, **_kwargs):
+        """Save book details."""
         if request.GET.get("book"):
             book_obj = models.BookModel.objects.get(id=request.GET.get("book"))
             book_obj.book_title = request.POST.get("title")
@@ -297,6 +312,7 @@ class AdminBookRequestListView(View):
     """Handles admin book requests and approvals."""
 
     def get(self, request, *_args, **_kwargs):
+        """Display pending requests."""
         book_list = models.BookAllotmentModel.objects.filter(status="pending").values(
             "id", "created_at", "modefield_at", "user__username", "book__book_title"
         )
@@ -307,6 +323,7 @@ class AdminBookRequestListView(View):
         )
 
     def post(self, request, *_args, **_kwargs):
+        """Approve/reject requests and send emails."""
         reject_lst, approve_lst = [], []
 
         for ele in request.POST:
@@ -336,3 +353,4 @@ class AdminBookRequestListView(View):
                 )
 
         return redirect("admin_book_request_list")
+        
