@@ -179,6 +179,91 @@ class AdminBookStatusList(View):
         )
 
 
+# @method_decorator([login_required, check_if_admin_or_user], name="dispatch")
+# class UserBookListView(View):
+#     """Displays book list and analytics for users."""
+
+#     def get(self, request, *_args, **_kwargs):
+#         """Display books and analytics."""
+#         if request.GET.get("query"):
+#             book_obj = models.BookModel.objects.filter(
+#                 book_title__icontains=request.GET.get("query")
+#             ).values()
+#         else:
+#             book_obj = models.BookModel.objects.values()
+
+#         for obj in book_obj:
+#             allot_obj = models.BookAllotmentModel.objects.filter(
+#                 book=obj.get("id"), user=request.user
+#             ).first()
+
+#             obj["available"] = allot_obj.status if allot_obj else None
+#             obj["occupied"] = bool(allot_obj and allot_obj.user != request.user)
+#             # obj["book_img"] = obj.get("book_img").split("/")[1]
+
+#         most_requested_books = (
+#             models.BookAllotmentModel.objects.values(
+#                 "book__id", "book__book_title", "book__book_img"
+#             )
+#             .annotate(request_count=Count("id"))
+#             .order_by("-request_count")[:5]
+#         )
+
+#         most_read_books = (
+#             models.BookAllotmentModel.objects.filter(status="approved")
+#             .values("book__id", "book__book_title", "book__book_img")
+#             .annotate(read_count=Count("id"))
+#             .order_by("-read_count")[:5]
+#         )
+
+#         trending_books = (
+#             models.BookAllotmentModel.objects.filter(
+#                 created_at__gte=now() - timedelta(days=7)
+#             )
+#             .values("book__id", "book__book_title", "book__book_img")
+#             .annotate(count=Count("id"))
+#             .order_by("-count")[:5]
+#         )
+
+#         return render(
+#             request,
+#             template_name="user_book_list.html",
+#             context={
+#                 "book_list": book_obj,
+#                 "most_requested": most_requested_books,
+#                 "most_read": most_read_books,
+#                 "trending": trending_books,
+#             },
+#         )
+
+#     def post(self, request, *_args, **_kwargs):
+#         """Handle book request."""
+#         models.BookAllotmentModel.objects.filter(user=request.user).delete()
+
+#         if request.POST.get("request_book"):
+#             book_obj = models.BookModel.objects.get(
+#                 id=request.POST.get("request_book")
+#             )
+#             models.BookAllotmentModel.objects.create(
+#                 user=request.user, book=book_obj, status="pending"
+#             )
+
+#         return redirect("user_book_list")
+
+
+
+
+
+import os
+from datetime import timedelta
+from django.shortcuts import render, redirect
+from django.utils.timezone import now
+from django.contrib.auth.decorators import login_required
+from django.utils.decorators import method_decorator
+from django.views import View
+from django.db.models import Count
+from . import models
+
 @method_decorator([login_required, check_if_admin_or_user], name="dispatch")
 class UserBookListView(View):
     """Displays book list and analytics for users."""
@@ -199,31 +284,53 @@ class UserBookListView(View):
 
             obj["available"] = allot_obj.status if allot_obj else None
             obj["occupied"] = bool(allot_obj and allot_obj.user != request.user)
-            obj["book_img"] = obj.get("book_img").split("/")[1]
+            
+            # Extract just the filename from the path
+            img_path = obj.get("book_img", "")
+            if img_path:
+                # Get just the filename (e.g., "img2.jpg" from "media/img2.jpg" or "static/img2.jpg")
+                obj["book_img"] = os.path.basename(img_path)
 
+        # Most requested books
         most_requested_books = (
-            models.BookAllotmentModel.objects.values(
-                "book__id", "book__book_title", "book__book_img"
-            )
+            models.BookAllotmentModel.objects
+            .values("book__id", "book__book_title", "book__book_img")
             .annotate(request_count=Count("id"))
             .order_by("-request_count")[:5]
         )
+        
+        # Extract filename for most_requested
+        for book in most_requested_books:
+            if book.get("book__book_img"):
+                book["book__book_img"] = os.path.basename(book["book__book_img"])
 
+        # Most read books (approved requests)
         most_read_books = (
-            models.BookAllotmentModel.objects.filter(status="approved")
+            models.BookAllotmentModel.objects
+            .filter(status="approved")
             .values("book__id", "book__book_title", "book__book_img")
             .annotate(read_count=Count("id"))
             .order_by("-read_count")[:5]
         )
+        
+        # Extract filename for most_read
+        for book in most_read_books:
+            if book.get("book__book_img"):
+                book["book__book_img"] = os.path.basename(book["book__book_img"])
 
+        # Trending books (last 7 days)
         trending_books = (
-            models.BookAllotmentModel.objects.filter(
-                created_at__gte=now() - timedelta(days=7)
-            )
+            models.BookAllotmentModel.objects
+            .filter(created_at__gte=now() - timedelta(days=7))
             .values("book__id", "book__book_title", "book__book_img")
             .annotate(count=Count("id"))
             .order_by("-count")[:5]
         )
+        
+        # Extract filename for trending
+        for book in trending_books:
+            if book.get("book__book_img"):
+                book["book__book_img"] = os.path.basename(book["book__book_img"])
 
         return render(
             request,
@@ -249,6 +356,7 @@ class UserBookListView(View):
             )
 
         return redirect("user_book_list")
+
 
 
 @method_decorator(check_if_admin_or_user, name="dispatch")
