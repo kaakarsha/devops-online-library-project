@@ -1,24 +1,38 @@
-from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login
-from django.views import View
+"""
+Views module for handling book management, authentication, and user/admin operations.
+"""
+
+from datetime import timedelta
+
+from django.conf import settings
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.contrib.auth import logout
-from django.utils.decorators import method_decorator
-from django.db.models import Q
-# Create your views here.
-from django.contrib.auth import authenticate, login
+from django.db.models import Count
 from django.http import HttpResponse
+from django.shortcuts import redirect, render
+from django.utils.decorators import method_decorator
+from django.utils.timezone import now
+from django.views import View
+from django.core.mail import send_mail
+
 from bookapp.forms import UserRegistrationForm
 from bookapp import models
 
 
 def index(request):
+    """
+    Basic index view.
+    """
     return HttpResponse("Hello, world. You're at the polls index.")
 
 
 def check_if_admin_or_user(view_func):
+    """
+    Decorator to restrict access based on admin/user role.
+    """
+
     def wrapper(request, *args, **kwargs):
-        user_type = "staff_user" if request.user.is_staff else "user"
         if not request.user.is_staff and request.path in [
             "/admin-book-list/",
             "/admin-book-detail/",
@@ -27,7 +41,7 @@ def check_if_admin_or_user(view_func):
             logout(request)
             return redirect("login_page")
 
-        elif request.user.is_staff and request.path not in [
+        if request.user.is_staff and request.path not in [
             "/admin-book-list/",
             "/admin-book-detail/",
             "/admin-book-request-list/",
@@ -35,24 +49,34 @@ def check_if_admin_or_user(view_func):
             logout(request)
             return redirect("login_page")
 
-        else:
-            request.access = True
+        request.access = True
         return view_func(request, *args, **kwargs)
 
     return wrapper
 
 
 class LogoutView(View):
+    """
+    Handles user logout.
+    """
+
     def get(self, request, *args, **kwargs):
+        """Logout user and redirect to login."""
         logout(request)
         return redirect("login_page")
 
 
 class LoginView(View):
+    """
+    Handles user login.
+    """
+
     def get(self, request, *args, **kwargs):
+        """Render login page."""
         return render(request, template_name="login.html")
 
     def post(self, request, *args, **kwargs):
+        """Authenticate and login user."""
         user_obj = authenticate(
             request,
             username=request.POST.get("email-username"),
@@ -69,18 +93,26 @@ class LoginView(View):
         if user_obj and user_obj.is_staff and user_obj.is_active:
             login(request, user_obj)
             return redirect("admin_book_list")
-        elif user_obj and user_obj.is_active:
+
+        if user_obj and user_obj.is_active:
             login(request, user_obj)
             return redirect("user_book_list")
+
         return redirect("login_page")
 
 
 class RegisterView(View):
+    """
+    Handles user registration.
+    """
+
     def get(self, request, *args, **kwargs):
+        """Render registration form."""
         form = UserRegistrationForm()
         return render(request, "register.html", {"form": form})
 
     def post(self, request, *args, **kwargs):
+        """Process registration form."""
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
@@ -91,15 +123,23 @@ class RegisterView(View):
 
 
 class IndexView(View):
+    """
+    Displays index page.
+    """
+
     def get(self, request, *args, **kwargs):
-        user_obj = User.objects.get(id=request.user.id)
+        """Render index page."""
         return render(request, template_name="index.html")
 
 
 @method_decorator(check_if_admin_or_user, name="dispatch")
 class AdminBookListView(View):
+    """
+    Displays and manages book list for admin.
+    """
+
     def get(self, request, *args, **kwargs):
-        """displays list of available books for admin"""
+        """Display list of books."""
         if request.GET.get("query"):
             book_obj = models.BookModel.objects.filter(
                 book_title__icontains=request.GET.get("query")
@@ -124,6 +164,7 @@ class AdminBookListView(View):
         )
 
     def post(self, request, *args, **kwargs):
+        """Handle delete/release actions."""
         if request.POST.get("deletesubmit") and request.POST.get("book_id"):
             models.BookModel.objects.filter(id=request.POST.get("book_id")).delete()
 
@@ -131,12 +172,17 @@ class AdminBookListView(View):
             models.BookAllotmentModel.objects.filter(
                 book__id=request.POST.get("book_id")
             ).delete()
+
         return redirect("admin_book_list")
 
 
 class AdminBookStatusList(View):
+    """
+    Displays book status for admin.
+    """
+
     def get(self, request, *args, **kwargs):
-        """displays books current status"""
+        """Show book status."""
         allot_obj = models.BookAllotmentModel.objects.values(
             "user__username", "book__book_title", "modefield_at", "status"
         )
@@ -147,60 +193,14 @@ class AdminBookStatusList(View):
         )
 
 
-# @method_decorator(check_if_admin_or_user, name="dispatch")
-# class UserBookListView(View):
-#     """displays list of available books for users"""
-#     def get(self, request, *args, **kwargs):
-#         if request.GET.get("query"):
-#             book_obj = models.BookModel.objects.filter(
-#                 book_title__icontains=request.GET.get("query")
-#             ).values()
-#         else:
-#             book_obj = models.BookModel.objects.values()
-#         for obj in book_obj:
-#             allot_obj = models.BookAllotmentModel.objects.filter(
-#                 book=obj.get("id"), user=request.user
-#             ).first()
-#             if allot_obj:
-#                 obj["available"] = allot_obj.status
-#             else:
-#                 obj["available"] = None
-
-#             obj["occupied"] = (
-#                 True if allot_obj and allot_obj.user != request.user else False
-#             )
-
-#             obj["book_img"] = obj.get("book_img").split("/")[1]
-#         return render(
-#             request,
-#             template_name="user_book_list.html",
-#             context={"book_list": book_obj},
-#         )
-
-#     def post(self, request, *args, **kwargs):
-#         models.BookAllotmentModel.objects.filter(user=request.user).delete()
-#         if request.POST.get("request_book"):
-#             book_obj = models.BookModel.objects.get(id=request.POST.get("request_book"))
-#             models.BookAllotmentModel.objects.create(
-#                 user=request.user, book=book_obj, status="pending"
-#             )
-#             return redirect("user_book_list")
-
-
-from django.db.models import Count
-from django.utils.timezone import now
-from datetime import timedelta
-from django.contrib.auth.decorators import login_required
-
 @method_decorator([login_required, check_if_admin_or_user], name="dispatch")
 class UserBookListView(View):
-    """displays list of available books for users"""
+    """
+    Displays book list and analytics for users.
+    """
 
     def get(self, request, *args, **kwargs):
-
-        if not request.user.is_authenticated:
-            return redirect("login_page")
-        # -------- Existing Book List Logic --------
+        """Display books, most requested, most read, and trending."""
         if request.GET.get("query"):
             book_obj = models.BookModel.objects.filter(
                 book_title__icontains=request.GET.get("query")
@@ -213,53 +213,33 @@ class UserBookListView(View):
                 book=obj.get("id"), user=request.user
             ).first()
 
-            if allot_obj:
-                obj["available"] = allot_obj.status
-            else:
-                obj["available"] = None
-
-            obj["occupied"] = (
-                True if allot_obj and allot_obj.user != request.user else False
-            )
-
+            obj["available"] = allot_obj.status if allot_obj else None
+            obj["occupied"] = bool(allot_obj and allot_obj.user != request.user)
             obj["book_img"] = obj.get("book_img").split("/")[1]
 
-        # -------- NEW: Most Requested Books --------
         most_requested_books = (
-            models.BookAllotmentModel.objects
-            .values("book__id", "book__book_title", "book__book_img")
+            models.BookAllotmentModel.objects.values(
+                "book__id", "book__book_title", "book__book_img"
+            )
             .annotate(request_count=Count("id"))
             .order_by("-request_count")[:5]
         )
 
-        for book in most_requested_books:
-            book["book__book_img"] = book["book__book_img"].split("/")[1]
-
-        # -------- NEW: Most Read Books (Approved) --------
         most_read_books = (
-            models.BookAllotmentModel.objects
-            .filter(status="approved")
+            models.BookAllotmentModel.objects.filter(status="approved")
             .values("book__id", "book__book_title", "book__book_img")
             .annotate(read_count=Count("id"))
             .order_by("-read_count")[:5]
         )
 
-        for book in most_read_books:
-            book["book__book_img"] = book["book__book_img"].split("/")[1]
-
-        # -------- OPTIONAL: Trending (Last 7 Days) --------
-        last_7_days = now() - timedelta(days=7)
-
         trending_books = (
-            models.BookAllotmentModel.objects
-            .filter(created_at__gte=last_7_days)
+            models.BookAllotmentModel.objects.filter(
+                created_at__gte=now() - timedelta(days=7)
+            )
             .values("book__id", "book__book_title", "book__book_img")
             .annotate(count=Count("id"))
             .order_by("-count")[:5]
         )
-
-        for book in trending_books:
-            book["book__book_img"] = book["book__book_img"].split("/")[1]
 
         return render(
             request,
@@ -273,6 +253,7 @@ class UserBookListView(View):
         )
 
     def post(self, request, *args, **kwargs):
+        """Handle book request."""
         models.BookAllotmentModel.objects.filter(user=request.user).delete()
 
         if request.POST.get("request_book"):
@@ -285,10 +266,15 @@ class UserBookListView(View):
 
         return redirect("user_book_list")
 
+
 @method_decorator(check_if_admin_or_user, name="dispatch")
 class UserHistoryList(View):
+    """
+    Displays user history.
+    """
+
     def get(self, request, *args, **kwargs):
-        """displays users current activity"""
+        """Show user activity."""
         allot_obj = models.BookAllotmentModel.objects.filter(user=request.user).values(
             "user__username", "book__book_title", "modefield_at", "status"
         )
@@ -301,8 +287,12 @@ class UserHistoryList(View):
 
 @method_decorator(check_if_admin_or_user, name="dispatch")
 class AdminBookDetailView(View):
+    """
+    Create or update book details.
+    """
+
     def get(self, request, *args, **kwargs):
-        """a form for admin to update or create a book"""
+        """Render book form."""
         book_obj = None
         if request.GET.get("book"):
             book_obj = (
@@ -319,6 +309,7 @@ class AdminBookDetailView(View):
         )
 
     def post(self, request, *args, **kwargs):
+        """Save book details."""
         if request.GET.get("book"):
             book_obj = models.BookModel.objects.get(id=request.GET.get("book"))
             book_obj.book_title = request.POST.get("title")
@@ -327,6 +318,7 @@ class AdminBookDetailView(View):
                 book_obj.book_img = request.FILES.get("fileinput")
             book_obj.save()
             return redirect("admin_book_list")
+
         models.BookModel.objects.create(
             book_title=request.POST.get("title"),
             activity_desc=request.POST.get("desc"),
@@ -335,15 +327,14 @@ class AdminBookDetailView(View):
         return redirect("admin_book_list")
 
 
-from django.core.mail import send_mail
-from django.conf import settings
-from django.contrib.auth.models import User
-
 @method_decorator(check_if_admin_or_user, name="dispatch")
 class AdminBookRequestListView(View):
+    """
+    Handles admin book requests and approvals.
+    """
+
     def get(self, request, *args, **kwargs):
-        """admin can view all available requests"""
-        user_obj = User.objects.get(id=request.user.id)
+        """Display pending requests."""
         book_list = models.BookAllotmentModel.objects.filter(status="pending").values(
             "id", "created_at", "modefield_at", "user__username", "book__book_title"
         )
@@ -353,71 +344,31 @@ class AdminBookRequestListView(View):
             context={"book_lst": book_list},
         )
 
-    # def post(self, request, *args, **kwargs):
-    #     reject_lst = []
-    #     approve_lst = []
-    #     if request.POST:
-    #         for ele in request.POST:
-    #             if "reject" in ele:
-    #                 reject_lst.append(request.POST.get(ele))
-    #             elif "approved" in ele:
-    #                 approve_lst.append(request.POST.get(ele))
-    #     models.BookAllotmentModel.objects.filter(id__in=reject_lst).update(
-    #         status="rejected"
-    #     )
-    #     models.BookAllotmentModel.objects.filter(id__in=approve_lst).update(
-    #         status="approved"
-    #     )
-    #     return redirect("admin_book_request_list")
-
-
-
     def post(self, request, *args, **kwargs):
-        reject_lst = []
-        approve_lst = []
+        """Approve/reject requests and send emails."""
+        reject_lst, approve_lst = [], []
 
-        if request.POST:
-            for ele in request.POST:
-                if "reject" in ele:
-                    reject_lst.append(request.POST.get(ele))
-                elif "approved" in ele:
-                    approve_lst.append(request.POST.get(ele))
+        for ele in request.POST:
+            if "reject" in ele:
+                reject_lst.append(request.POST.get(ele))
+            elif "approved" in ele:
+                approve_lst.append(request.POST.get(ele))
 
-        # Update rejected
         models.BookAllotmentModel.objects.filter(id__in=reject_lst).update(
             status="rejected"
         )
 
-        # Get approved objects BEFORE updating (for email data)
         approved_objs = models.BookAllotmentModel.objects.filter(id__in=approve_lst)
-
-        # Update approved
         approved_objs.update(status="approved")
 
-        # SEND EMAILS
         for obj in approved_objs:
-            user_email = obj.user.email
-            username = obj.user.username
-            book_title = obj.book.book_title
-
-            if user_email:  # safety check
+            if obj.user.email:
                 send_mail(
                     subject="Book Request Approved",
-                    message=f"""
-    Hello {username},
-
-    Your request for the book "{book_title}" has been APPROVED.
-
-    Please collect the book within 1 day.
-
-    Thank you,
-    Library Team
-                    """,
+                    message=f"Hello {obj.user.username}, your request for '{obj.book.book_title}' is approved.",
                     from_email=settings.EMAIL_HOST_USER,
-                    recipient_list=[user_email],
+                    recipient_list=[obj.user.email],
                     fail_silently=False,
                 )
 
         return redirect("admin_book_request_list")
-
-#------------------------------------------------------------------------------------
