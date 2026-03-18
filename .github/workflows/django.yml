@@ -7,7 +7,7 @@ on:
 
 jobs:
 
-  prebuild_stage:
+  prebuild:
     runs-on: ubuntu-latest
 
     steps:
@@ -36,9 +36,9 @@ jobs:
           java -version
 
 
-  pylint_stage:
+  pylint:
     runs-on: ubuntu-latest
-    needs: prebuild_stage
+    needs: prebuild
 
     steps:
       - name: Checkout repo
@@ -72,9 +72,9 @@ jobs:
           path: coverage.xml
 
 
-  sonar_stage:
+  sonar:
     runs-on: ubuntu-latest
-    needs: pylint_stage
+    needs: pylint
 
     steps:
       - name: Checkout repo
@@ -129,9 +129,9 @@ jobs:
           retention-days: 5
 
 
-  deploy_stage:
+  deploy:
     runs-on: ubuntu-latest
-    needs: sonar_stage
+    needs: sonar
 
     steps:
       - name: Download Deployment Package
