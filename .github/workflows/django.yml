@@ -158,4 +158,5 @@ jobs:
           region: us-east-1
           version_label: "build-${{ github.run_number }}"
           deployment_package: deploy.zip
+          use_existing_version_if_available: true
           wait_for_deployment: false
