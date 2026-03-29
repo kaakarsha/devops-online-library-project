@@ -25,7 +25,6 @@ class BasicViewTests(TestCase):
             username="admin", password="pass123", is_staff=True
         )
 
-        # Create book (IMPORTANT: give proper image path format)
         self.book = models.BookModel.objects.create(
             book_title="Test Book",
             book_img="media/test.jpg",  # ensures split("/") works
