@@ -87,3 +87,4 @@ class BasicViewTests(TestCase):
         self.assertTrue(
             models.BookAllotmentModel.objects.filter(user=self.user).exists()
         )
+        
